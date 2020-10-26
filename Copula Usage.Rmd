@@ -1,0 +1,146 @@
+---
+title: "Copula Usage"
+author: "Max"
+date: "10/22/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(MASS)
+library(mvtnorm)
+library(plotly)
+library(copula)
+library(VineCopula)
+library(ggplot2)
+library(GGally)
+library(plot3D)
+```
+
+Generating values from multivariate normal distribution
+
+```{r}
+set.seed(100)
+
+X_bar = matrix(c(2,3), nrow=2)
+S = matrix(c(2,-1,-1,2), nrow=2, ncol=2, byrow=TRUE)
+
+normVals = mvrnorm(n=700, mu=X_bar, Sigma = S)
+
+var(normVals)
+cor(normVals)
+```
+
+
+```{r}
+ggplot(data.frame(normVals), aes(x=X1)) +
+  geom_histogram(bins=30, color = 'darkorchid3', fill = 'orchid3') +
+  ggtitle('Histogram of Simulated Normal Values with mu = 2, var = 2') +
+  ylab('Frequency') +
+    coord_cartesian(ylim = c(0,70), xlim = c(-3,8))
+
+ggplot(data.frame(normVals), aes(x=X2)) +
+  geom_histogram(bins=30, color = 'darkorchid3', fill = 'orchid3') +
+  ggtitle('Histogram of Simulated Normal Values with mu = 3, var = 2') +
+  ylab('Frequency') +
+  coord_cartesian(ylim = c(0,70), xlim = c(-3,8))
+
+ggpairs(data.frame(normVals))
+```
+
+Pairsplot and histogram of simulated bivariate normal values.
+
+```{r}
+pvals = cbind(pnorm(normVals[,1], mean=2, sd=sqrt(2)), pnorm(normVals[,2], mean=3, sd=sqrt(2)))
+
+ggplot(data.frame(pvals), aes(x=X1)) +
+  geom_histogram(bins=30, color = 'darkorchid3', fill = 'orchid3') +
+  ggtitle('Histogram of Simulated F(X1) Values Using pnorm') +
+  ylab('Frequency') +
+  coord_cartesian(ylim = c(0,40))
+
+ggplot(data.frame(pvals), aes(x=X2)) +
+  geom_histogram(bins=30, color = 'darkorchid3', fill = 'orchid3') +
+  ggtitle('Histogram of Simulated F(X2) Values Using pnorm') +
+  ylab('Frequency') +
+  coord_cartesian(ylim = c(0,40))
+
+ggpairs(data.frame(pvals))
+```
+
+```{r}
+epvals = cbind(pobs(normVals[,1]),pobs(normVals[,2]))
+
+ggplot(data.frame(epvals), aes(x=X1)) +
+  geom_histogram(bins=30, color = 'darkorchid3', fill = 'orchid3') +
+  ggtitle('Histogram of Simulated F(X1) Values Using Cumulative Density Estimation') +
+  ylab('Frequency') +
+  coord_cartesian(ylim = c(0,40))
+
+ggplot(data.frame(epvals), aes(x=X2)) +
+  geom_histogram(bins=30, color = 'darkorchid3', fill = 'orchid3') +
+  ggtitle('Histogram of Simulated F(X2) Values Using Cumulative Density Estimation') +
+  ylab('Frequency') + 
+  coord_cartesian(ylim = c(0,40))
+```
+
+
+```{r}
+tmp = BiCopSelect(pvals[,1],pvals[,2])
+summary(tmp)
+```
+
+Estimated copula and parameters when using true cumulative.
+
+```{r}
+tmp = BiCopSelect(epvals[,1],epvals[,2])
+summary(tmp)
+```
+
+Estimated copula and parameters when using estimated cumulative.
+
+```{r}
+normCop = normalCopula(dim=2)
+copFit = fitCopula(normCop,as.matrix(pvals))
+copFit
+```
+
+Fitted gaussian copula
+
+```{r}
+copSim = rCopula(n=700, normalCopula(param=coef(copFit),dim=2))
+
+cov(copSim)
+cor(copSim)
+
+ggplot(data.frame(copSim), aes(x=X1)) +
+  geom_histogram(bins=30, color = 'darkorchid3', fill = 'orchid3') +
+  ggtitle('Histogram of Simulated F(X1) Values Using Gaussian Copula') +
+  ylab('Frequency') +
+  coord_cartesian(ylim = c(0,40))
+
+ggplot(data.frame(copSim), aes(x=X2)) +
+  geom_histogram(bins=30, color = 'darkorchid3', fill = 'orchid3') +
+  ggtitle('Histogram of Simulated F(X2) Values Using Gaussian Copula') +
+  ylab('Frequency') + 
+  coord_cartesian(ylim = c(0,40))
+```
+
+Copulas preserve the correlation structure between the cumulative values used to construct the copula. 
+
+```{r}
+cop_x1 = qnorm(copSim[,1], mean = 2, sd = sqrt(2))
+cop_x2 = qnorm(copSim[,2], mean = 3, sd = sqrt(2))
+
+simData = data.frame(x1 = c(normVals[,1] ,cop_x1), x2 = c(normVals[,2] ,cop_x2), Source = c(rep('Bivariate Normal', 700), rep('Gaussian Copula', 700)))
+```
+
+
+```{r}
+ggplot(simData, aes(x = x1, y = x2, color = Source)) +
+  geom_point() +
+  ggtitle('Distribution of Simulated Data from Bivariate Normal and Gaussian Copula')
+```
