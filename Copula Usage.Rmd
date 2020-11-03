@@ -2,7 +2,9 @@
 title: "Copula Usage"
 author: "Max"
 date: "10/22/2020"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -136,6 +138,11 @@ cop_x1 = qnorm(copSim[,1], mean = 2, sd = sqrt(2))
 cop_x2 = qnorm(copSim[,2], mean = 3, sd = sqrt(2))
 
 simData = data.frame(x1 = c(normVals[,1] ,cop_x1), x2 = c(normVals[,2] ,cop_x2), Source = c(rep('Bivariate Normal', 700), rep('Gaussian Copula', 700)))
+```
+
+```{r}
+colMeans(cbind(cop_x1,cop_x2))
+var(cbind(cop_x1, cop_x2))
 ```
 
 
